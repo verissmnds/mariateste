@@ -5,6 +5,7 @@ import os
 import csv
 from datetime import datetime
 import pandas as pd
+import json
 from content import INTRODUCAO_TEXT, SETORES
 
 # Configuração da página do Streamlit
@@ -46,9 +47,14 @@ COLUNAS = [
 ]
 
 def get_sheets_client():
-    """Tenta autenticar com a API do Google Sheets usando Streamlit Secrets."""
-    if "gcp_service_account" not in st.secrets or "spreadsheet_url" not in st.secrets:
+    """Tenta autenticar com a API do Google Sheets usando Streamlit Secrets (suporta formato TOML e JSON)."""
+    # Verificar se as secrets mínimas estão presentes
+    has_toml = "gcp_service_account" in st.secrets and "spreadsheet_url" in st.secrets
+    has_json = "gcp_service_account_json" in st.secrets and "spreadsheet_url" in st.secrets
+    
+    if not has_toml and not has_json:
         return None, None
+        
     try:
         import gspread
         from google.oauth2.service_account import Credentials
@@ -58,18 +64,36 @@ def get_sheets_client():
             "https://www.googleapis.com/auth/drive"
         ]
         
-        creds_info = dict(st.secrets["gcp_service_account"])
-        # Corrigir quebras de linha na chave privada
-        if "private_key" in creds_info:
-            creds_info["private_key"] = creds_info["private_key"].replace("\\n", "\n")
-            
+        # 1. Tentar ler do formato JSON direto (mais seguro contra erros de formatação PEM)
+        if has_json:
+            creds_info = json.loads(st.secrets["gcp_service_account_json"])
+        # 2. Fallback para o formato TOML estruturado
+        else:
+            creds_info = dict(st.secrets["gcp_service_account"])
+            if "private_key" in creds_info:
+                pk = creds_info["private_key"]
+                if "\\n" in pk:
+                    pk = pk.replace("\\n", "\n")
+                creds_info["private_key"] = pk
+                
         credentials = Credentials.from_service_account_info(creds_info, scopes=scopes)
         client = gspread.authorize(credentials)
         sheet = client.open_by_url(st.secrets["spreadsheet_url"])
         return client, sheet
     except Exception as e:
-        # Se falhar, exibe um aviso (apenas no desenvolvimento ou se configurado errado)
-        st.sidebar.warning(f"Erro ao conectar ao Google Sheets: {e}. Salvamento local ativado.")
+        # Gerar informações detalhadas para o diagnóstico na barra lateral
+        pk_info = "Nenhuma credencial configurada"
+        if has_json:
+            pk_info = f"Formato: JSON bruto | Tamanho: {len(st.secrets['gcp_service_account_json'])} chars"
+        elif has_toml and "private_key" in st.secrets["gcp_service_account"]:
+            pk = st.secrets["gcp_service_account"]["private_key"]
+            pk_info = (
+                f"Formato: TOML estruturado | Tamanho: {len(pk)} chars | "
+                f"Começa com BEGIN: {pk.startswith('-----BEGIN PRIVATE KEY-----')} | "
+                f"Quebras de linha (\\n): {pk.count(chr(10))} | "
+                f"Literais (\\\\n): {pk.count('\\\\n')}"
+            )
+        st.sidebar.warning(f"Erro ao conectar ao Google Sheets: {e}\n\n🔍 Diagnóstico da Chave:\n{pk_info}")
         return None, None
 
 def salvar_resposta(dados):
@@ -86,15 +110,12 @@ def salvar_resposta(dados):
     
     if sheet is not None:
         try:
-            # Tentar abrir ou criar a aba (worksheet) com o nome do procedimento
             try:
                 worksheet = sheet.worksheet(procedimento)
             except Exception:
-                # Se não existir, criar com os cabeçalhos
                 worksheet = sheet.add_worksheet(title=procedimento, rows="100", cols="15")
                 worksheet.append_row(COLUNAS)
             
-            # Adicionar a nova resposta
             worksheet.append_row(linha)
             return True, "Google Sheets"
         except Exception as e:
@@ -124,13 +145,11 @@ def carregar_respostas(procedimento):
             try:
                 worksheet = sheet.worksheet(procedimento)
                 records = worksheet.get_all_records()
-                # Converter lista de dicionários para DataFrame do Pandas
                 if records:
                     return pd.DataFrame(records)
                 else:
                     return pd.DataFrame(columns=COLUNAS)
             except Exception:
-                # Aba ainda não existe (nenhuma resposta cadastrada)
                 return pd.DataFrame(columns=COLUNAS)
         except Exception as e:
             st.error(f"Erro ao ler do Google Sheets: {e}. Lendo dados locais...")
@@ -186,6 +205,18 @@ with st.sidebar:
     if selected_page != st.session_state.current_page:
         st.session_state.current_page = selected_page
         st.rerun()
+
+    st.write("---")
+    
+    # --- DIAGNÓSTICO DE CONEXÃO NO SIDEBAR ---
+    st.markdown("### 🔌 Conexão Google Sheets")
+    client_test, sheet_test = get_sheets_client()
+    if "gcp_service_account" not in st.secrets and "gcp_service_account_json" not in st.secrets:
+        st.info("⚠️ Usando Banco de Dados Local (CSV).\n\nPara usar o Google Sheets, configure o arquivo `.streamlit/secrets.toml`.")
+    elif client_test is None or sheet_test is None:
+        st.error("❌ Erro de Conexão com o Google Sheets! Verifique as credenciais ou o e-mail compartilhado.")
+    else:
+        st.success("✅ Conectado ao Google Sheets com sucesso!")
 
     st.write("---")
     st.markdown("### 📌 Norma ABNT")
@@ -298,7 +329,6 @@ elif st.session_state.current_page == "📝 Enviar Minha Pesquisa":
     st.title("📝 Envio de Dados de Pesquisa")
     st.markdown("Utilize o formulário abaixo para registrar os detalhes e a classificação da sua pesquisa científica.")
     
-    # Criar formulário do Streamlit
     with st.form("form_pesquisa", clear_on_submit=True):
         col_inf1, col_inf2 = st.columns(2)
         with col_inf1:
@@ -332,11 +362,9 @@ elif st.session_state.current_page == "📝 Enviar Minha Pesquisa":
         
         st.markdown("<small>* Campos obrigatórios</small>", unsafe_allow_html=True)
         
-        # Botão de envio
         submitted = st.form_submit_button("Submeter Pesquisa para o Mural")
         
         if submitted:
-            # Validação simples
             if not nome or not turma or not nome_pesquisa or not pergunta or not quantidade_dados or not periodo or not fontes:
                 st.error("⚠️ Por favor, preencha todos os campos obrigatórios sinalizados com *.")
             else:
@@ -369,11 +397,9 @@ elif st.session_state.current_page == "📊 Mural de Pesquisas":
     st.markdown("Visualize as classificações e delineamentos de pesquisas enviados por outros alunos da turma.")
     st.write("---")
     
-    # Filtro por Procedimento
     procedimentos_disponiveis = ["Experimental", "Bibliográfica", "Documental", "De Campo", "Etnográfica"]
     filtro_proc = st.selectbox("Selecione o Procedimento para filtrar as pesquisas:", procedimentos_disponiveis)
     
-    # Carregar dados
     with st.spinner("Carregando pesquisas..."):
         df_respostas = carregar_respostas(filtro_proc)
         
@@ -382,9 +408,7 @@ elif st.session_state.current_page == "📊 Mural de Pesquisas":
     else:
         st.success(f"Foram encontradas **{len(df_respostas)}** pesquisas cadastradas em **{filtro_proc}**:")
         
-        # Exibir em formato de Fichas Acadêmicas Modernas (HTML/CSS)
         for _, row in df_respostas.iterrows():
-            # Tratar possíveis valores nulos
             nome_aluno = row.get("Nome", "Não informado")
             turma_aluno = row.get("Turma", "Não informado")
             titulo_pesquisa = row.get("Nome da Pesquisa", "Sem título")
@@ -396,7 +420,6 @@ elif st.session_state.current_page == "📊 Mural de Pesquisas":
             fontes_pesquisa = row.get("Fontes", "Não especificado")
             data_envio = row.get("Data de Envio", "Não registrado")
             
-            # HTML da ficha acadêmica
             ficha_html = f"""
             <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 20px; margin-bottom: 20px; border-left: 5px solid #0369a1; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                 <h4 style="margin: 0 0 8px 0; color: #0f172a; font-family: Arial, sans-serif; font-size: 1.2rem; text-transform: uppercase;">📕 {titulo_pesquisa}</h4>
@@ -420,7 +443,6 @@ elif st.session_state.current_page == "📊 Mural de Pesquisas":
             """
             st.markdown(ficha_html, unsafe_allow_html=True)
             
-        # Adicionar tabela bruta em expander para quem quiser ver/copiar os dados como planilha
         with st.expander("👁️ Visualizar dados brutos em formato de tabela"):
             st.dataframe(df_respostas, use_container_width=True)
 
