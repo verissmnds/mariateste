@@ -1,0 +1,153 @@
+/* Estilos Customizados para a Plataforma de Metodologia de Pesquisa */
+/* Baseado nas normas ABNT de tipografia e espaçamento, com design moderno e premium */
+
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap');
+
+/* Configurações Globais */
+html, body, [class*="css"] {
+    font-family: "Arial", "Helvetica", sans-serif !important;
+}
+
+/* Títulos Principais e Cabeçalhos - Estilo ABNT Modernizado */
+h1 {
+    font-family: "Arial", "Helvetica", sans-serif !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    color: #1e293b !important; /* Grafite escuro */
+    font-size: 2.2rem !important;
+    letter-spacing: 1px;
+    border-bottom: 3px solid #0284c7; /* Azul acadêmico */
+    padding-bottom: 12px;
+    margin-bottom: 25px !important;
+}
+
+h2 {
+    font-family: "Arial", "Helvetica", sans-serif !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    font-size: 1.6rem !important;
+    margin-top: 30px !important;
+    margin-bottom: 15px !important;
+    text-transform: uppercase;
+}
+
+h3 {
+    font-family: "Arial", "Helvetica", sans-serif !important;
+    font-weight: 700 !important;
+    color: #0369a1 !important; /* Azul médio */
+    font-size: 1.3rem !important;
+    margin-top: 20px !important;
+    margin-bottom: 12px !important;
+}
+
+/* Corpo de Texto com Espaçamento ABNT (1.5 e Justificado) */
+p, li {
+    font-family: "Arial", "Helvetica", sans-serif !important;
+    font-size: 1.05rem !important;
+    line-height: 1.6 !important; /* ABNT especifica 1.5, tela pede um pouquinho mais */
+    color: #334155 !important; /* Grafite escuro suave */
+    text-align: justify;
+}
+
+/* Destaque Acadêmico (Citações e Recuos ABNT) */
+blockquote {
+    background-color: #f8fafc !important;
+    border-left: 5px solid #0284c7 !important;
+    padding: 15px 20px !important;
+    margin: 20px 0px 20px 40px !important; /* Recuo clássico ABNT de 4cm proporcionalizado */
+    font-size: 0.95rem !important;
+    color: #475569 !important;
+    font-style: normal !important;
+    border-radius: 4px;
+}
+
+/* Sidebar Customizada (Visual Premium e Glassmorphism) */
+section[data-testid="stSidebar"] {
+    background-color: #0f172a !important; /* Fundo escuro azulado */
+    color: #f8fafc !important;
+}
+
+section[data-testid="stSidebar"] h1, 
+section[data-testid="stSidebar"] h2, 
+section[data-testid="stSidebar"] h3 {
+    color: #f1f5f9 !important;
+    border-color: #38bdf8 !important;
+}
+
+section[data-testid="stSidebar"] .stRadio > label {
+    color: #f1f5f9 !important;
+    font-weight: 600 !important;
+}
+
+/* Cartões Interativos (Cards) */
+.category-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 20px;
+    border-left: 5px solid #0284c7;
+}
+
+.category-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    border-left-color: #38bdf8;
+}
+
+.category-card h3 {
+    margin-top: 0 !important;
+    color: #0f172a !important;
+}
+
+/* Estilização das Abas (Tabs) do Streamlit */
+button[data-baseweb="tab"] {
+    font-family: "Arial", "Helvetica", sans-serif !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+    border-bottom: 2px solid transparent !important;
+    padding: 10px 16px !important;
+    transition: all 0.2s ease;
+}
+
+button[data-baseweb="tab"]:hover {
+    color: #0284c7 !important;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #0284c7 !important;
+    border-bottom: 2px solid #0284c7 !important;
+}
+
+/* Caixa de Estudo de Caso (Aparência de Artigo Científico) */
+.case-study-box {
+    background: #fdfdfd;
+    border: 1px double #cbd5e1;
+    border-radius: 8px;
+    padding: 25px;
+    margin-top: 15px;
+    box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.02);
+}
+
+.case-study-title {
+    font-family: "Times New Roman", "Times", serif !important;
+    font-size: 1.4rem !important;
+    font-weight: bold;
+    color: #1e293b;
+    text-align: center;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+/* Rodapé Acadêmico */
+.footer-text {
+    font-size: 0.85rem !important;
+    color: #94a3b8 !important;
+    text-align: center;
+    margin-top: 50px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 20px;
+}
